@@ -16,7 +16,7 @@ from optparse import OptionParser
 from operator import neg
 #from math import sin,cos
 
-if GeoCom_mod.COM_OpenConnection('/dev/ttyUSB0', 115200)[0]:
+if GeoCom_mod.COM_OpenConnection('/dev/ttyS0', 115200)[0]:
     sys.exit("Can not open Port... exiting")
 
 prism_type = 7
