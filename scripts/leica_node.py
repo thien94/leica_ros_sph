@@ -15,7 +15,9 @@ from geometry_msgs.msg import PoseStamped
 from optparse import OptionParser
 from operator import neg
 #from math import sin,cos
+import tf
 
+print 'Connecting to Leica through serial port'
 if GeoCom_mod.COM_OpenConnection('/dev/ttyS0', 115200)[0]:
     sys.exit("Can not open Port... exiting")
 
@@ -29,11 +31,13 @@ print "Leica TS is set up"
 
 # Set up ROS:
 rospy.init_node('leica_node')
-pub_carth = rospy.Publisher("/leica/pose", PoseStamped, queue_size=1) #for px4
-pub_point = rospy.Publisher('/leica/worldpose',PoseStamped, queue_size=1) #original total station world frame
+pub_carth = rospy.Publisher("/leica/pose/relative", PoseStamped, queue_size=1) #for px4
+pub_point = rospy.Publisher('/leica/pose/absolute',PoseStamped, queue_size=1) #original total station map frame
+br = tf.TransformBroadcaster()
 print "ROS-node is set up"
 
 loop_count = 1
+num_init_samples = 10
 
 while not rospy.is_shutdown():
 
@@ -55,37 +59,54 @@ while not rospy.is_shutdown():
                 if RC==1285:
                     print '!!!!!WARNING!!!!! Distance could not be guaranteed \n'
                 
-		#should be ENU - XYZ
-                if (loop_count<10):
-                    x_offset =  float(coord[1])
-                    y_offset =  float(coord[0])
+		        #should be ENU - XYZ
+                if (loop_count < num_init_samples):
+                    print 'Collecting some samples for initial offset'
+                    x_offset =  float(coord[0])
+                    y_offset =  float(coord[1])
                     z_offset =  float(coord[2])
-                carth_x =   float(coord[1]) + (x_offset*-1) 
-                carth_y =  float(coord[0]) + (y_offset*-1) 
-                carth_h =  -float(coord[2]) - (z_offset*-1) 
+
+                carth_x =  float(coord[0]) - x_offset
+                carth_y =  float(coord[1]) - y_offset 
+                carth_h =  float(coord[2]) - z_offset 
       
-                point_x =   float(coord[0])  #East
-                point_y =   float(coord[1])  #North
+                point_x =  float(coord[0])  #East
+                point_y =  float(coord[1])  #North
                 point_z =  float(coord[2])  #Up
 
             else:
                 print '!!!!!WARNING!!!!! NO DATA!!! \n'
-            
+        
+        # Publish point in relative coordinate
         carth_meas.header.stamp = rospy.Time.now()
         carth_meas.pose.position.x = carth_x
         carth_meas.pose.position.y = carth_y
         carth_meas.pose.position.z = carth_h
         carth_meas.header.seq = loop_count
-        carth_meas.header.frame_id = 'fcu'
+        carth_meas.header.frame_id = 'map'
         pub_carth.publish(carth_meas)
 
+        # Publish point in absolute coordinate
         point_meas.header.stamp = rospy.Time.now()
         point_meas.pose.position.x = point_x
         point_meas.pose.position.y = point_y
         point_meas.pose.position.z = point_z
         point_meas.header.seq = loop_count
-        point_meas.header.frame_id = 'fcu'
+        point_meas.header.frame_id = 'map'
         pub_point.publish(point_meas)
+
+        # Publish tf
+        br.sendTransform((carth_x, carth_y, carth_h),
+                        tf.transformations.quaternion_from_euler(0,0,0),
+                        rospy.Time.now(),
+                        "leica_rel",
+                        "map")
+
+        br.sendTransform((point_x, point_y, point_z),
+                        tf.transformations.quaternion_from_euler(0,0,0),
+                        rospy.Time.now(),
+                        "leica_abs",
+                        "map")
 
         loop_count = loop_count + 1
         

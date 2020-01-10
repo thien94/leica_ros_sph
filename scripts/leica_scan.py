@@ -14,7 +14,7 @@ from std_msgs.msg import String
 # Handling options
 usage = "usage: rosrun leica_interface %prog [options]"
 parser = OptionParser(usage=usage)
-parser.set_defaults(port="/dev/ttyUSB0",baudrate=115200, debug=False, dHzRes = 0.00001, dVRange =  5, dHzRange =  5, motvelV = 0.01)
+parser.set_defaults(port="/dev/ttyS0",baudrate=115200, debug=False, dHzRes = 0.00001, dVRange =  5, dHzRange =  5, motvelV = 0.01)
 
 parser.add_option("-p", "--port", action="store", type="string", dest="port", help="specify used port [default: %default]")
 parser.add_option("-b", "--baudrate", action="store", type="int", dest="baudrate", help="specify used baudrate [default: %default]")

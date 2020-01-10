@@ -1,0 +1,8 @@
+
+<launch>
+    <!-- leica node -->
+    <node name="leica_node" pkg="leica_ros_sph" type="leica_node.py" respawn="true" output="screen" />
+
+    <!-- RViz visualization -->
+    <node name="rviz_visualization" pkg="rviz" type="rviz" args="-d $(find leica_ros_sph)/rviz/ms60.rviz" />
+</launch>
